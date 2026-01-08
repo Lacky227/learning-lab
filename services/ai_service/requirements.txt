@@ -1,0 +1,6 @@
+fastapi
+pydantic[email]
+pydantic-settings
+sqlalchemy
+asyncpg
+uvicorn

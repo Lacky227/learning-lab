@@ -1,0 +1,67 @@
+services:
+    postgres:
+      image: postgres:15-alpine
+      container_name: postgres
+      networks:
+        - backend
+      environment:
+        POSTGRES_USER: ${POSTGRES_USER}
+        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+        POSTGRES_DB: ${POSTGRES_DB}
+      volumes:
+        - postgres_data:/var/lib/postgresql/data
+      healthcheck:
+        test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
+        interval: 10s
+        timeout: 5s
+        retries: 5
+    
+    main-service:
+      build:
+        context: ./main_service
+        dockerfile: Dockerfile
+      container_name: main-service
+      depends_on:
+        postgres:
+          condition: service_healthy
+      networks:
+        - backend
+      ports:
+        - "3000:3000"
+      restart: unless-stopped
+      environment:
+        AI_SERVICE_URL: ${AI_SERVICE_URL}
+        POSTGRES_USER: ${POSTGRES_USER}
+        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+        POSTGRES_DB: ${POSTGRES_DB}
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+        interval: 30s
+        timeout: 10s
+        retries: 3
+    
+    ai-service:
+      build:
+        context: ./ai_service
+        dockerfile: Dockerfile
+      container_name: ai-service
+      depends_on:
+        postgres:
+          condition: service_healthy
+      networks:
+        - backend
+      restart: unless-stopped
+      environment:
+        DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:8000/api/core/health"]
+        interval: 30s
+        timeout: 10s
+        retries: 3
+
+networks:
+    backend:
+        driver: bridge
+
+volumes:
+    postgres_data:
