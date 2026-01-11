@@ -17,6 +17,8 @@
 **/node_modules/
 **/dist/
 **/build/
+**/generated/prisma/
+**/prisma/migrations/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
