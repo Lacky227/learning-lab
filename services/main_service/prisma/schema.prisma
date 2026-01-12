@@ -29,6 +29,7 @@ model Task {
   description String?
   priority    Priority     @default(MEDIUM) // LOW, MEDIUM, HIGH
   category    Category     @default(GENERAL)  // TASK, WORK, FEATURE, BUG, GENERAL
+  status      Status   @default(TO_DO) // e.g., TO_DO, IN_PROGRESS, COMPLETED
   user        User     @relation(fields: [userId], references: [id])
   userId      Int
 }
@@ -45,4 +46,9 @@ enum Category {
   FEATURE
   BUG
   GENERAL
+}
+enum Status {
+  TO_DO
+  IN_PROGRESS
+  COMPLETED
 }
