@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { User } from "../entity/user.entity";
 import { UserCreateDto } from "../dto/user-create.dto";
 import { ApiResponseDto } from "../dto/api-response.dto";
 import { UserRepository } from "../repository/user.repository";
@@ -19,8 +18,7 @@ export class UsersService {
             throw new UserAlreadyExistsException();
         }
 
-        const user = this.userRepository.create(dto);
-        await this.userRepository.save(user);
+        const user = await this.userRepository.create(dto);
 
         return {
             success: true,
@@ -28,7 +26,7 @@ export class UsersService {
             data: new UserResponseDto(
                 user.username,
                 user.email,
-                user.age
+                user.age ?? undefined
             )
         }
     }
@@ -45,7 +43,7 @@ export class UsersService {
             data: new UserResponseDto(
                 user.username,
                 user.email,
-                user.age
+                user.age ?? undefined
             )
         }
     }
