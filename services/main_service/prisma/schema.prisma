@@ -6,7 +6,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -30,6 +29,7 @@ model Task {
   priority    Priority     @default(MEDIUM) // LOW, MEDIUM, HIGH
   category    Category     @default(GENERAL)  // TASK, WORK, FEATURE, BUG, GENERAL
   status      Status   @default(TO_DO) // e.g., TO_DO, IN_PROGRESS, COMPLETED
+  isDone      Boolean  @default(false)
   user        User     @relation(fields: [userId], references: [id])
   userId      Int
 }
