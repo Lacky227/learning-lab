@@ -4,11 +4,12 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { TaskRepository } from './task.repository';
 import { ApiResponseDto } from './dto/api-response.dto';
 import { TaskResponseDto } from './dto/task-response.dto';
-import { TaskCategory } from './entities/enums/task-category.enum';
-import { TaskPriority } from './entities/enums/task-priority.enum';
+import { TaskCategory } from './enums/task-category.enum';
+import { TaskPriority } from './enums/task-priority.enum';
 import { v4 as uuidv4 } from 'uuid';
 import { AiService } from './ai.service';
-import { TaskNotFoundException } from 'src/tasks/exceptions/task-not-found.exception';
+import { TaskNotFoundException } from './exceptions/task-not-found.exception';
+import { TaskStatus } from './enums/task-status.enum';
 
 @Injectable()
 export class TasksService {
@@ -19,13 +20,14 @@ export class TasksService {
   ) {}
   
   async create(createTaskDto: CreateTaskDto): Promise<ApiResponseDto<any>>{
-    const task = this.taskRepository.create(createTaskDto);
+    const task = createTaskDto as any;
     task.taskId = uuidv4();
     const aiResult = await this.aiService.analyzeTaskContent(task.description);
     task.priority = aiResult?.priority ?? TaskPriority.MEDIUM;
     task.category = aiResult?.category ?? TaskCategory.GENERAL;
+    task.status = TaskStatus.TO_DO;
     task.isDone = false;
-    await this.taskRepository.save(task);
+    await this.taskRepository.create(task);
     return {
       success: true,
       message: 'Task ' + task.taskId + ' added',
@@ -48,7 +50,7 @@ export class TasksService {
       data: tasks.map(task => new TaskResponseDto(
         task.taskId,
         task.title,
-        task.description,
+        task.description ?? '',
         task.priority,
         task.category,
         task.isDone
@@ -67,7 +69,7 @@ export class TasksService {
       data: new TaskResponseDto(
         task.taskId,
         task.title,
-        task.description,
+        task.description ?? '',
         task.priority,
         task.category,
         task.isDone
@@ -80,18 +82,17 @@ export class TasksService {
     if (!task) {
       throw new TaskNotFoundException('Task ' + taskId + ' not found');
     }
-    const updatedTask = this.taskRepository.create({ ...task, ...updateTaskDto });
-    await this.taskRepository.update(taskId, updatedTask);
+    await this.taskRepository.update(taskId, updateTaskDto);
     return {
       success: true,
       message: 'Task ' + taskId + ' updated',
       data: new TaskResponseDto(
-        updatedTask.taskId,
-        updatedTask.title,
-        updatedTask.description,
-        updatedTask.priority,
-        updatedTask.category,
-        updatedTask.isDone
+        task.taskId,
+        task.title,
+        task.description ?? '',
+        task.priority,
+        task.category,
+        task.isDone
       )
     };
   }
@@ -108,7 +109,7 @@ export class TasksService {
       data: new TaskResponseDto(
         task.taskId,
         task.title,
-        task.description,
+        task.description ?? '',
         task.priority,
         task.category,
         task.isDone
