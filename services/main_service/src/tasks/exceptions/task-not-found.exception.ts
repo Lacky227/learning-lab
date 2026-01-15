@@ -1,6 +1,5 @@
-
 export class TaskNotFoundException extends Error {
-    constructor(description: string) {
-        super(description);
+    constructor(message?: string) {
+        super(message || 'Task not found');
     }
 }
