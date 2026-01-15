@@ -5,6 +5,7 @@ import { UserRepository } from "../repository/user.repository";
 import { UserAlreadyExistsException } from "../exception/user-already-exists.exception";
 import { UserResponseDto } from "../dto/user-response.dto";
 import { UserNotFoundException } from "../exception/user-not-found.exception";
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
@@ -18,6 +19,7 @@ export class UsersService {
             throw new UserAlreadyExistsException();
         }
 
+        dto.password = await bcrypt.hash(dto.password, 10);
         const user = await this.userRepository.create(dto);
 
         return {
