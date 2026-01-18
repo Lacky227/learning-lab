@@ -47,6 +47,7 @@ services:
       environment:
         AI_SERVICE_URL: ${AI_SERVICE_URL}
         DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+        JWT_SECRET: ${JWT_SECRET}
       healthcheck:
         test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
         interval: 30s
