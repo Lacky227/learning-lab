@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TaskRepository } from './task.repository';
@@ -13,21 +13,35 @@ import { TaskStatus } from './enums/task-status.enum';
 
 @Injectable()
 export class TasksService {
-
+  private readonly logger = new Logger(TasksService.name);
   constructor(
     private readonly taskRepository: TaskRepository,
     private readonly aiService: AiService,
   ) {}
   
-  async create(createTaskDto: CreateTaskDto): Promise<ApiResponseDto<any>>{
+  async create(createTaskDto: CreateTaskDto): Promise<ApiResponseDto<any>> {
+    this.logger.log(`Creating task: "${createTaskDto.title}"`);
+
     const task = createTaskDto as any;
     task.taskId = uuidv4();
+
+    this.logger.debug(`Generated taskId: ${task.taskId}`);
+
     const aiResult = await this.aiService.analyzeTaskContent(task.description);
+
     task.priority = aiResult?.priority ?? TaskPriority.MEDIUM;
     task.category = aiResult?.category ?? TaskCategory.GENERAL;
     task.status = TaskStatus.TO_DO;
     task.isDone = false;
+
+    this.logger.debug(
+      `AI analyzed task ${task.taskId}: priority=${task.priority}, category=${task.category}`
+    );
+
     await this.taskRepository.create(task);
+
+    this.logger.log(`Task created successfully: ${task.taskId}`);
+
     return {
       success: true,
       message: 'Task ' + task.taskId + ' added',
@@ -43,7 +57,12 @@ export class TasksService {
   }
 
   async findAll(): Promise<ApiResponseDto<any>> {
+    this.logger.log('Fetching all tasks');
+
     const tasks = await this.taskRepository.findAll();
+
+    this.logger.log(`Tasks found: ${tasks.length}`);
+
     return {
       success: true,
       message: 'Tasks found (' + tasks.length + ')',
@@ -55,14 +74,21 @@ export class TasksService {
         task.category,
         task.isDone
       ))
-    }
+    };
   }
 
   async findOne(taskId: string): Promise<ApiResponseDto<any>> {
+    this.logger.log(`Fetching task by id: ${taskId}`);
+
     const task = await this.taskRepository.findOneByTaskId(taskId);
+
     if (!task) {
+      this.logger.warn(`Task not found: ${taskId}`);
       throw new TaskNotFoundException('Task ' + taskId + ' not found');
     }
+
+    this.logger.log(`Task found: ${taskId}`);
+
     return {
       success: true,
       message: 'Task ' + taskId + ' found',
@@ -78,11 +104,19 @@ export class TasksService {
   }
 
   async update(taskId: string, updateTaskDto: UpdateTaskDto): Promise<ApiResponseDto<any>> {
+    this.logger.log(`Updating task: ${taskId}`);
+
     const task = await this.taskRepository.findOneByTaskId(taskId);
+
     if (!task) {
+      this.logger.warn(`Update failed. Task not found: ${taskId}`);
       throw new TaskNotFoundException('Task ' + taskId + ' not found');
     }
+
     await this.taskRepository.update(taskId, updateTaskDto);
+
+    this.logger.log(`Task updated successfully: ${taskId}`);
+
     return {
       success: true,
       message: 'Task ' + taskId + ' updated',
@@ -98,11 +132,19 @@ export class TasksService {
   }
 
   async remove(taskId: string): Promise<ApiResponseDto<any>> {
+    this.logger.log(`Removing task: ${taskId}`);
+
     const task = await this.taskRepository.findOneByTaskId(taskId);
+
     if (!task) {
+      this.logger.warn(`Remove failed. Task not found: ${taskId}`);
       throw new TaskNotFoundException('Task ' + taskId + ' not found');
     }
+
     await this.taskRepository.remove(taskId);
+
+    this.logger.log(`Task removed successfully: ${taskId}`);
+
     return {
       success: true,
       message: 'Task ' + task.taskId + ' removed',
