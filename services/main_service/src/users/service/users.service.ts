@@ -14,7 +14,7 @@ export class UsersService {
         private readonly userRepository: UserRepository
     ) {}
 
-        async addUser(dto: UserCreateDto): Promise<ApiResponseDto<any>> {
+    async addUser(dto: UserCreateDto): Promise<ApiResponseDto<any>> {
         this.logger.log(`Attempt to create user: ${dto.username} (${dto.email})`);
 
         const exists = await this.userRepository.findByUsernameOrEmail(dto.username, dto.email);
