@@ -19,7 +19,7 @@ export class TasksService {
     private readonly aiService: AiService,
   ) {}
   
-  async create(createTaskDto: CreateTaskDto): Promise<ApiResponseDto<any>> {
+  async create(createTaskDto: CreateTaskDto, userId: number): Promise<ApiResponseDto<any>> {
     this.logger.log(`Creating task: "${createTaskDto.title}"`);
 
     const task = createTaskDto as any;
@@ -33,6 +33,7 @@ export class TasksService {
     task.category = aiResult?.category ?? TaskCategory.GENERAL;
     task.status = TaskStatus.TO_DO;
     task.isDone = false;
+    task.userId = userId;
 
     this.logger.debug(
       `AI analyzed task ${task.taskId}: priority=${task.priority}, category=${task.category}`
@@ -56,10 +57,10 @@ export class TasksService {
     };
   }
 
-  async findAll(): Promise<ApiResponseDto<any>> {
+  async findAll(userId: number): Promise<ApiResponseDto<any>> {
     this.logger.log('Fetching all tasks');
 
-    const tasks = await this.taskRepository.findAll();
+    const tasks = await this.taskRepository.findAllByUserId(userId);
 
     this.logger.log(`Tasks found: ${tasks.length}`);
 
@@ -77,10 +78,10 @@ export class TasksService {
     };
   }
 
-  async findOne(taskId: string): Promise<ApiResponseDto<any>> {
+  async findOne(taskId: string, userId: number): Promise<ApiResponseDto<any>> {
     this.logger.log(`Fetching task by id: ${taskId}`);
 
-    const task = await this.taskRepository.findOneByTaskId(taskId);
+    const task = await this.taskRepository.findOneByTaskId(taskId, userId);
 
     if (!task) {
       this.logger.warn(`Task not found: ${taskId}`);
@@ -103,10 +104,10 @@ export class TasksService {
     };
   }
 
-  async update(taskId: string, updateTaskDto: UpdateTaskDto): Promise<ApiResponseDto<any>> {
+  async update(taskId: string, updateTaskDto: UpdateTaskDto, userId: number): Promise<ApiResponseDto<any>> {
     this.logger.log(`Updating task: ${taskId}`);
 
-    const task = await this.taskRepository.findOneByTaskId(taskId);
+    const task = await this.taskRepository.findOneByTaskId(taskId, userId);
 
     if (!task) {
       this.logger.warn(`Update failed. Task not found: ${taskId}`);
@@ -131,17 +132,17 @@ export class TasksService {
     };
   }
 
-  async remove(taskId: string): Promise<ApiResponseDto<any>> {
+  async remove(taskId: string, userId: number): Promise<ApiResponseDto<any>> {
     this.logger.log(`Removing task: ${taskId}`);
 
-    const task = await this.taskRepository.findOneByTaskId(taskId);
+    const task = await this.taskRepository.findOneByTaskId(taskId, userId);
 
     if (!task) {
       this.logger.warn(`Remove failed. Task not found: ${taskId}`);
       throw new TaskNotFoundException('Task ' + taskId + ' not found');
     }
 
-    await this.taskRepository.remove(taskId);
+    await this.taskRepository.remove(task);
 
     this.logger.log(`Task removed successfully: ${taskId}`);
 
