@@ -31,7 +31,7 @@ export class TaskRepository {
     }
 
     async findOneByTaskId(taskId: string, userId: number): Promise<Task | null> {
-        return await this.prismaService.task.findUnique({ where: { taskId, userId } });
+        return await this.prismaService.task.findFirst({ where: { taskId, userId } });
     }
 
     async remove(task: Task): Promise<Task> {
