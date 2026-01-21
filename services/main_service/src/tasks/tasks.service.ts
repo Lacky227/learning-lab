@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { AiService } from './ai.service';
 import { TaskNotFoundException } from './exceptions/task-not-found.exception';
 import { TaskStatus } from './enums/task-status.enum';
+import { Category, Priority, Status, Prisma } from '@prisma/client';
 
 @Injectable()
 export class TasksService {
@@ -19,55 +20,44 @@ export class TasksService {
     private readonly aiService: AiService,
   ) {}
   
-  async create(createTaskDto: CreateTaskDto, userId: number): Promise<ApiResponseDto<any>> {
+  async create(createTaskDto: CreateTaskDto, userId: number): Promise<ApiResponseDto<TaskResponseDto>> {
     this.logger.log(`Creating task: "${createTaskDto.title}"`);
 
-    const task = createTaskDto as any;
-    task.taskId = uuidv4();
+    const aiResult = await this.aiService.analyzeTaskContent(createTaskDto.description ?? '');
 
-    this.logger.debug(`Generated taskId: ${task.taskId}`);
-
-    const aiResult = await this.aiService.analyzeTaskContent(task.description);
-
-    task.priority = aiResult?.priority ?? TaskPriority.MEDIUM;
-    task.category = aiResult?.category ?? TaskCategory.GENERAL;
-    task.status = TaskStatus.TO_DO;
-    task.isDone = false;
-    task.userId = userId;
+    const taskInput = this.buildTaskCreateInput(createTaskDto, userId, aiResult ?? { category: TaskCategory.GENERAL, priority: TaskPriority.MEDIUM });
 
     this.logger.debug(
-      `AI analyzed task ${task.taskId}: priority=${task.priority}, category=${task.category}`
+      `AI analyzed task ${taskInput.taskId}: priority=${taskInput.priority}, category=${taskInput.category}`
     );
+    
+    const createdTask = await this.taskRepository.create(taskInput);
 
-    await this.taskRepository.create(task);
+    this.logger.log(`Task created successfully: ${createdTask.taskId}`);
 
-    this.logger.log(`Task created successfully: ${task.taskId}`);
-
-    return {
-      success: true,
-      message: 'Task ' + task.taskId + ' added',
-      data: new TaskResponseDto(
-        task.taskId,
-        task.title,
-        task.description,
-        task.priority,
-        task.category,
-        task.isDone
+    return ApiResponseDto.success(
+      'Task ' + createdTask.taskId + ' created',
+      new TaskResponseDto(
+        createdTask.taskId,
+        createdTask.title,
+        createdTask.description ?? '',
+        createdTask.priority,
+        createdTask.category,
+        createdTask.isDone
       )
-    };
+    )
   }
 
-  async findAll(userId: number): Promise<ApiResponseDto<any>> {
+  async findAll(userId: number): Promise<ApiResponseDto<TaskResponseDto[]>> {
     this.logger.log('Fetching all tasks');
 
     const tasks = await this.taskRepository.findAllByUserId(userId);
 
     this.logger.log(`Tasks found: ${tasks.length}`);
 
-    return {
-      success: true,
-      message: 'Tasks found (' + tasks.length + ')',
-      data: tasks.map(task => new TaskResponseDto(
+    return ApiResponseDto.success(
+      'Tasks found (' + tasks.length + ')',
+      tasks.map(task => new TaskResponseDto(
         task.taskId,
         task.title,
         task.description ?? '',
@@ -75,10 +65,10 @@ export class TasksService {
         task.category,
         task.isDone
       ))
-    };
+    );
   }
 
-  async findOne(taskId: string, userId: number): Promise<ApiResponseDto<any>> {
+  async findOne(taskId: string, userId: number): Promise<ApiResponseDto<TaskResponseDto>> {
     this.logger.log(`Fetching task by id: ${taskId}`);
 
     const task = await this.taskRepository.findOneByTaskId(taskId, userId);
@@ -90,10 +80,9 @@ export class TasksService {
 
     this.logger.log(`Task found: ${taskId}`);
 
-    return {
-      success: true,
-      message: 'Task ' + taskId + ' found',
-      data: new TaskResponseDto(
+    return ApiResponseDto.success(
+      'Task ' + taskId + ' found',
+      new TaskResponseDto(
         task.taskId,
         task.title,
         task.description ?? '',
@@ -101,10 +90,10 @@ export class TasksService {
         task.category,
         task.isDone
       )
-    };
+    );
   }
 
-  async update(taskId: string, updateTaskDto: UpdateTaskDto, userId: number): Promise<ApiResponseDto<any>> {
+  async update(taskId: string, updateTaskDto: UpdateTaskDto, userId: number): Promise<ApiResponseDto<TaskResponseDto>> {
     this.logger.log(`Updating task: ${taskId}`);
 
     const task = await this.taskRepository.findOneByTaskId(taskId, userId);
@@ -118,21 +107,20 @@ export class TasksService {
 
     this.logger.log(`Task updated successfully: ${taskId}`);
 
-    return {
-      success: true,
-      message: 'Task ' + taskId + ' updated',
-      data: new TaskResponseDto(
+    return ApiResponseDto.success(
+      'Task ' + taskId + ' updated',
+      new TaskResponseDto(
         task.taskId,
-        task.title,
-        task.description ?? '',
-        task.priority,
-        task.category,
-        task.isDone
+        updateTaskDto.title ?? task.title,
+        updateTaskDto.description ?? task.description ?? '',
+        updateTaskDto.priority ?? task.priority,
+        updateTaskDto.category ?? task.category,
+        updateTaskDto.isDone ?? task.isDone
       )
-    };
+    )
   }
 
-  async remove(taskId: string, userId: number): Promise<ApiResponseDto<any>> {
+  async remove(taskId: string, userId: number): Promise<ApiResponseDto<null>> {
     this.logger.log(`Removing task: ${taskId}`);
 
     const task = await this.taskRepository.findOneByTaskId(taskId, userId);
@@ -146,17 +134,24 @@ export class TasksService {
 
     this.logger.log(`Task removed successfully: ${taskId}`);
 
+    return ApiResponseDto.success(
+      'Task ' + taskId + ' removed',
+      null
+    )
+  }
+
+  private buildTaskCreateInput(dto: CreateTaskDto, userId: number, aiResult: { category: TaskCategory; priority: TaskPriority; }): Prisma.TaskCreateInput {
     return {
-      success: true,
-      message: 'Task ' + task.taskId + ' removed',
-      data: new TaskResponseDto(
-        task.taskId,
-        task.title,
-        task.description ?? '',
-        task.priority,
-        task.category,
-        task.isDone
-      )
+      taskId: uuidv4(),
+      title: dto.title || 'Untitled Task',
+      description: dto.description,
+      priority: 
+       Priority[aiResult?.priority as keyof typeof Priority] ?? Priority.MEDIUM,
+      category: 
+       Category[aiResult?.category as keyof typeof Category] ?? Category.GENERAL,
+      status: Status[TaskStatus.TO_DO],
+      isDone: false,
+      user: { connect: { id: userId } },
     };
   }
 }
