@@ -4,6 +4,7 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { CurrentUser } from 'src/auth/current-user.decorator';
+import type { ActiveUser } from 'src/auth/current-user.decorator';
 
 @Controller('tasks')
 @UseGuards(JwtAuthGuard)
@@ -13,14 +14,14 @@ export class TasksController {
   @Post('/add')
   async create(
     @Body() createTaskDto: CreateTaskDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: ActiveUser,
   ) {
     return await this.tasksService.create(createTaskDto, user?.id);
   }
 
   @Get('/all')
   async findAll(
-    @CurrentUser() user: any,
+    @CurrentUser() user: ActiveUser,
   ) {
     return await this.tasksService.findAll(user?.id);
   }
@@ -28,7 +29,7 @@ export class TasksController {
   @Get('/one/:taskId')
   async findOne(
     @Param('taskId') taskId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: ActiveUser,
   ) {
     return await this.tasksService.findOne(taskId, user?.id);
   }
@@ -37,7 +38,7 @@ export class TasksController {
   async update(
     @Param('taskId') taskId: string, 
     @Body() updateTaskDto: UpdateTaskDto,
-    @CurrentUser() user: any,
+    @CurrentUser() user: ActiveUser,
   ) {
     return await this.tasksService.update(taskId, updateTaskDto, user?.id);
   }
@@ -45,7 +46,7 @@ export class TasksController {
   @Delete('/remove/:taskId')
   async remove(
     @Param('taskId') taskId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: ActiveUser,
   ) {
     return await this.tasksService.remove(taskId, user?.id);
   }
