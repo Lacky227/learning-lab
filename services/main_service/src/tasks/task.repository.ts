@@ -24,15 +24,17 @@ export class TaskRepository {
         );
     }
 
-    async findAll(): Promise<Task[]> {
-        return this.prismaService.task.findMany();
+    async findAllByUserId(userId: number): Promise<Task[]> {
+        return this.prismaService.task.findMany({
+            where: { userId }
+        });
     }
 
-    async findOneByTaskId(taskId: string): Promise<Task | null> {
-        return await this.prismaService.task.findUnique({ where: { taskId } });
+    async findOneByTaskId(taskId: string, userId: number): Promise<Task | null> {
+        return await this.prismaService.task.findFirst({ where: { taskId, userId } });
     }
 
-    async remove(taskId: string) {
-        return await this.prismaService.task.delete({ where: { taskId } });
+    async remove(task: Task): Promise<Task> {
+        return await this.prismaService.task.delete({ where: { taskId: task.taskId } });
     }
 }
