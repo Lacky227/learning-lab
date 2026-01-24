@@ -1,16 +1,34 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateTaskDto } from './create-task.dto';
-import { IsBoolean, IsEnum } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsBoolean, IsEnum, IsOptional } from 'class-validator';
 import { TaskPriority } from '../enums/task-priority.enum';
 import { TaskCategory } from '../enums/task-category.enum';
 
 export class UpdateTaskDto extends PartialType(CreateTaskDto) {
-    @IsEnum(TaskPriority)
-    priority?: TaskPriority;
-    
-    @IsEnum(TaskCategory)
-    category?: TaskCategory;
+  @ApiPropertyOptional({
+    enum: TaskPriority,
+    example: TaskPriority.HIGH,
+    description: 'Task priority',
+  })
+  @IsEnum(TaskPriority)
+  @IsOptional()
+  priority?: TaskPriority;
 
-    @IsBoolean()
-    isDone?: boolean;
+  @ApiPropertyOptional({
+    enum: TaskCategory,
+    example: TaskCategory.WORK,
+    description: 'Task category',
+  })
+  @IsEnum(TaskCategory)
+  @IsOptional()
+  category?: TaskCategory;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Task completion status',
+  })
+  @IsBoolean()
+  @IsOptional()
+  isDone?: boolean;
 }
