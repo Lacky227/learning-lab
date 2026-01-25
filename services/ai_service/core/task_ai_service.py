@@ -1,28 +1,22 @@
 from schemas.task_enums import TaskPriorityEnum, TaskCategoryEnum
-
+from setfit import SetFitModel
+from typing import List, cast
 class TaskAiService:
+    def __init__(self):
+        self.priority_model = SetFitModel.from_pretrained("/app/ai_models/setfit_model_priority")
+        self.category_model = SetFitModel.from_pretrained("/app/ai_models/setfit_model_category")
+
     async def analyze_task(self, description: str):
-        text = description.lower()
-        
-        priority = TaskPriorityEnum.LOW
+        priority_preds = cast(List[str], self.priority_model.predict([description]))
+        category_preds = cast(List[str], self.category_model.predict([description]))
 
-        if any(word in text for word in ["urgent", "important", "critical", "fix"]):
-            priority = TaskPriorityEnum.HIGH
-        elif any(word in text for word in ["medium", "normal"]):
-            priority = TaskPriorityEnum.MEDIUM
+        priority = TaskPriorityEnum(priority_preds[0])
+        category = TaskCategoryEnum(category_preds[0])
 
-        category = TaskCategoryEnum.TASK
-
-        if any(word in text for word in ["feature", "new", "add", "implement"]):
-            category = TaskCategoryEnum.FEATURE
-            
-        if any(word in text for word in ["bug", "fix", "error", "defect"]):
-            category = TaskCategoryEnum.BUG
-            
-        if any(word in text for word in ["general", "other"]):
-            category = TaskCategoryEnum.GENERAL
-
-        return {"priority": priority, "category": category}
+        return {
+            "priority": priority, 
+            "category": category
+            }
 
 
 task_ai_service_instance = TaskAiService()
